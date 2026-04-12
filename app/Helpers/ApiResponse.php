@@ -30,8 +30,12 @@ trait ApiResponse
     protected function respondError(
         string $message = 'An unexpected error occurred.',
         mixed $data = null,
-        int $statusCode = 400
+        mixed $statusCode = 400
     ): JsonResponse {
-        return $this->respond(false, $data, $message, $statusCode);
+        if (!is_numeric($statusCode) || $statusCode < 100 || $statusCode > 599) {
+            $statusCode = 500;
+        }
+
+        return $this->respond(false, $data, $message, (int) $statusCode);
     }
 }
