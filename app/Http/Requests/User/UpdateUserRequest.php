@@ -17,6 +17,8 @@ class UpdateUserRequest extends FormRequest
         $userId = (int) $this->route('id');
 
         return [
+            'id' => ['required', 'uuid'],
+
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => [
                 'sometimes',
@@ -27,13 +29,21 @@ class UpdateUserRequest extends FormRequest
             'password' => ['sometimes', 'string', 'min:6'],
         ];
     }
-    
+
     public function attributes()
     {
-        return[
+        return [
+            'id' => 'ID do Usuário',
             'name' => 'Nome',
             'email' => 'Email',
             'password' => 'Senha',
         ];
+    }
+
+    protected function prepareForValidation()
+    {
+        $this->merge([
+            'id' => $this->route('id'),
+        ]);
     }
 }

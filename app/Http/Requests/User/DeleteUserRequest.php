@@ -4,7 +4,7 @@ namespace App\Http\Requests\User;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class DestroyUserRequest extends FormRequest
+class DeleteUserRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,7 @@ class DestroyUserRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'id' => ['required', 'integer', 'min:1'],
+            'id' => ['required', 'uuid'],
         ];
     }
 

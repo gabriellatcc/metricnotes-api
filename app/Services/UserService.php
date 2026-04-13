@@ -6,20 +6,34 @@ use App\Http\Resources\UserCollection;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Gate;
+use Tymon\JWTAuth\Facades\JWTAuth;
 use Exception;
 
 class UserService
 {
     public function index(array $data): UserCollection
     {
-        $userId = (int) $data['user_id'];
-        $isAdmin = (bool) $data['is_admin'];
-        $perPage = (int) $data['per_page'];
+        $userLogado = JWTAuth::parseToken()->authenticate();
+
+        if (! $userLogado) {
+            throw new Exception('Usuário não autenticado.', 401);
+        }
+
+        $perPage = (int) ($data['per_page'] ?? 15);
+        $search = $data['search'] ?? null;
 
         $usersQuery = User::query()->latest();
 
-        if (! $isAdmin) {
-            $usersQuery->whereKey($userId);
+        if ($search) {
+            $usersQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if (! $userLogado->is_admin) {
+            $usersQuery->whereKey($userLogado->id);
         }
 
         $users = $usersQuery->paginate($perPage);
@@ -34,6 +48,8 @@ class UserService
         if (! $user) {
             throw new Exception('Usuário não encontrado', 404);
         }
+
+        Gate::authorize('view', $user);
 
         return new UserResource($user);
     }
@@ -66,6 +82,8 @@ class UserService
             throw new Exception('Usuário não encontrado', 404);
         }
 
+        Gate::authorize('update', $user);
+
         if (isset($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         }
@@ -82,6 +100,8 @@ class UserService
         if (! $user) {
             throw new Exception('Usuário não encontrado', 404);
         }
+
+        Gate::authorize('delete', $user);
 
         return $user->delete();
     }

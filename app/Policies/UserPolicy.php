@@ -15,19 +15,14 @@ class UserPolicy extends BasePolicy
         return null;
     }
 
-    public function viewAny(User $user): bool
+    public function index(User $user): bool
     {
         return true;
     }
 
-    public function view(User $user, User $model): bool
+    public function show(User $user, User $model): bool
     {
         return $this->checkSelf($user, $model);
-    }
-
-    public function create(User $user): bool
-    {
-        return true;
     }
 
     public function update(User $user, User $model): bool
