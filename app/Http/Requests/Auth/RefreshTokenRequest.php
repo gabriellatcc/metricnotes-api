@@ -17,4 +17,10 @@ class RefreshTokenRequest extends FormRequest
             'refresh_token' => ['required', 'string'],
         ];
     }
+    public function attributes()
+    {
+        return [
+            'refresh_token' => 'Token antigo'
+        ];
+    }
 }

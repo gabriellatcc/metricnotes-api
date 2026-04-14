@@ -50,7 +50,7 @@ class AuthService
     public function refreshToken(array $data): array
     {
         try {
-            $newAccessToken = JWTAuth::setToken($data['token_antigo'])->refresh();
+            $newAccessToken = JWTAuth::setToken($data['refresh_token'])->refresh();
             $user = JWTAuth::setToken($newAccessToken)->toUser();
 
             if (! $user) {

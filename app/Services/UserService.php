@@ -49,7 +49,7 @@ class UserService
             throw new Exception('Usuário não encontrado', 404);
         }
 
-        Gate::authorize('view', $user);
+        Gate::authorize('show', $user);
 
         return new UserResource($user);
     }
