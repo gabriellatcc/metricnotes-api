@@ -35,7 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'data' => $exception->errors(),
-                'message' => 'Validation failed.',
+                'message' => 'Validação falhou.',
             ], 422);
         });
 
@@ -43,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'data' => null,
-                'message' => 'Unauthorized.',
+                'message' => 'Não autenticado.',
             ], 401);
         });
 
@@ -69,7 +69,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'data' => null,
-                'message' => 'Internal server error.',
+                'message' => 'Erro interno do servidor.',
             ], 500);
         });
     })->create();
