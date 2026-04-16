@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
-use App\Http\Resources\UserResource;
+use App\Http\Resources\User\UserResource;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Exception;
@@ -12,14 +12,12 @@ class AuthService
 {
     public function login(array $data): array
     {
-        $user = User::query()->where('email', $data['email'])->first();
-
-        if (! $user || ! Hash::check($data['password'], $user->password)) {
-            throw new Exception('', 401);
+        if (!$token = auth('api')->attempt($data)) {
+            throw new Exception('Credenciais inválidas', 401);
         }
-
-        $token = JWTAuth::fromUser($user);
-
+    
+        $user = auth('api')->user();
+    
         return [
             'user' => new UserResource($user),
             'authorization' => [
