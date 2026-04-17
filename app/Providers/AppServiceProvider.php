@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Models\Task;
+use App\Models\TaskType;
 use App\Models\User;
 use App\Observers\UserObserver;
 use App\Policies\TaskPolicy;
+use App\Policies\TaskTypePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
+        Gate::policy(TaskType::class, TaskTypePolicy::class);
 
         User::observe(UserObserver::class);
     }
