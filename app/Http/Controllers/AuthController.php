@@ -18,10 +18,14 @@ class AuthController extends Controller
 
             return $this->respondSuccess($data, 'Usuário logado com sucesso!');
         } catch (Exception $e) {
+            $code = 500;
             if ($e->getMessage() === 'Credenciais inválidas.') {
                 $code = 401;
+            } elseif ($e->getCode() >= 100 && $e->getCode() <= 599) {
+                $code = (int) $e->getCode();
             }
-            return $this->respondError('Erro ao logar usuário: ' . $e->getMessage(), $code);
+
+            return $this->respondError('Erro ao logar usuário: ' . $e->getMessage(), null, $code);
         }
     }
 
