@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Resources\NoteType;
+namespace App\Http\Resources\Tip;
 
 use App\Http\Resources\User\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class NoteTypeResource extends JsonResource
+class TipResource extends JsonResource
 {
     public function toArray(Request $request): array
     {

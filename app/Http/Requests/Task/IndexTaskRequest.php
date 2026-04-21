@@ -27,7 +27,7 @@ class IndexTaskRequest extends FormRequest
             'page' => ['sometimes', 'integer', 'min:1'],
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'nullable', 'string'],
-            'task_type_id' => ['sometimes', 'nullable', 'uuid', 'exists:task_types,id'],
+            'tip_id' => ['sometimes', 'nullable', 'uuid', 'exists:tips,id'],
         ];
     }
 }

@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Requests\NoteType;
+namespace App\Http\Requests\Tip;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateNoteTypeRequest extends FormRequest
+class UpdateTipRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -13,25 +12,25 @@ class UpdateNoteTypeRequest extends FormRequest
     }
 
     /**
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'id' => ['required', 'uuid', 'exists:note_types,id'],
+            'id' => ['required', 'uuid', 'exists:tips,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'color' => ['sometimes', 'nullable', 'string', 'max:255'],
         ];
     }
 
-    public function attributes()
+    public function attributes(): array
     {
         return [
-            'id' => 'ID do tipo de nota',
+            'id' => 'ID da dica',
         ];
     }
 
-    protected function prepareForValidation()
+    protected function prepareForValidation(): void
     {
         $this->merge([
             'id' => $this->route('id'),

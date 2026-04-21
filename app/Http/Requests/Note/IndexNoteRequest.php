@@ -21,7 +21,7 @@ class IndexNoteRequest extends FormRequest
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'note_type_id' => ['sometimes', 'nullable', 'uuid', 'exists:note_types,id'],
+            'tip_id' => ['sometimes', 'nullable', 'uuid', 'exists:tips,id'],
         ];
     }
 }

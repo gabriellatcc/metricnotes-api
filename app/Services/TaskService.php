@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Http\Resources\Task\TaskCollection;
 use App\Http\Resources\Task\TaskResource;
 use App\Models\Task;
-use App\Models\TaskType;
+use App\Models\Tip;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +21,7 @@ class TaskService
         }
 
         $tasks = Task::query()
-            ->with(['taskTypes'])
+            ->with(['tips'])
             ->where('user_id', $user->id)
             ->when($data['search'] ?? null, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -32,8 +32,8 @@ class TaskService
             ->when($data['status'] ?? null, function ($query, $status) {
                 $query->where('status', $status);
             })
-            ->when($data['task_type_id'] ?? null, function ($query, $typeId) {
-                $query->whereHas('taskTypes', fn ($q) => $q->where('task_types.id', $typeId));
+            ->when($data['tip_id'] ?? null, function ($query, $tipId) {
+                $query->whereHas('tips', fn ($q) => $q->where('tips.id', $tipId));
             })
             ->latest()
             ->paginate($data['per_page'] ?? 15, ['*'], 'page', $data['page'] ?? 1);
@@ -43,7 +43,7 @@ class TaskService
 
     public function show(array $data): TaskResource
     {
-        $task = Task::with(['taskTypes'])->find($data['id']);
+        $task = Task::with(['tips'])->find($data['id']);
 
         if (! $task) {
             throw new Exception('Tarefa não encontrada', 404);
@@ -56,8 +56,8 @@ class TaskService
 
     public function store(array $data): TaskResource
     {
-        $taskTypeIds = $data['task_type_ids'] ?? [];
-        unset($data['task_type_ids']);
+        $tipIds = $data['tip_ids'] ?? [];
+        unset($data['tip_ids']);
 
         $data['user_id'] = auth('api')->id();
 
@@ -68,10 +68,10 @@ class TaskService
 
         $task = Task::create($data);
 
-        $syncIds = $this->taskTypeIdsOwnedByTaskUser($task, $taskTypeIds);
-        $task->taskTypes()->sync($syncIds);
+        $syncIds = $this->tipIdsOwnedByTaskUser($task, $tipIds);
+        $task->tips()->sync($syncIds);
 
-        return new TaskResource($task->load('taskTypes'));
+        return new TaskResource($task->load('tips'));
     }
 
     public function update(array $data): TaskResource
@@ -86,7 +86,7 @@ class TaskService
 
         $task->update($data);
 
-        return new TaskResource($task->load('taskTypes'));
+        return new TaskResource($task->load('tips'));
     }
 
     public function assignType(array $data): TaskResource
@@ -95,14 +95,14 @@ class TaskService
 
         Gate::authorize('update', $task);
 
-        $taskTypeIds = $data['task_type_ids'] ?? [];
+        $tipIds = $data['tip_ids'] ?? [];
 
-        DB::transaction(function () use ($task, $taskTypeIds) {
-            $syncIds = $this->taskTypeIdsOwnedByTaskUser($task, $taskTypeIds);
-            $task->taskTypes()->sync($syncIds);
+        DB::transaction(function () use ($task, $tipIds) {
+            $syncIds = $this->tipIdsOwnedByTaskUser($task, $tipIds);
+            $task->tips()->sync($syncIds);
         });
 
-        return new TaskResource($task->fresh()->load('taskTypes'));
+        return new TaskResource($task->fresh()->load('tips'));
     }
 
     public function delete(array $data): bool
@@ -122,7 +122,7 @@ class TaskService
      * @param  array<int, string>  $ids
      * @return array<int, string>
      */
-    protected function taskTypeIdsOwnedByTaskUser(Task $task, array $ids): array
+    protected function tipIdsOwnedByTaskUser(Task $task, array $ids): array
     {
         $ids = array_values(array_unique(array_filter($ids)));
 
@@ -130,13 +130,13 @@ class TaskService
             return [];
         }
 
-        $validCount = TaskType::query()
+        $validCount = Tip::query()
             ->whereIn('id', $ids)
             ->where('user_id', $task->user_id)
             ->count();
 
         if ($validCount !== count($ids)) {
-            throw new Exception('Um ou mais tipos de tarefa são inválidos ou não pertencem ao dono da tarefa.', 422);
+            throw new Exception('Uma ou mais dicas são inválidas ou não pertencem ao dono da tarefa.', 422);
         }
 
         return $ids;
@@ -165,7 +165,7 @@ class TaskService
         $task->status = 'postponed';
 
         $task->save();
-        $task->load('taskTypes');
+        $task->load('tips');
 
         return new TaskResource($task);
     }
@@ -185,7 +185,7 @@ class TaskService
             'completed_at' => now(),
         ]);
 
-        $task->load('taskTypes');
+        $task->load('tips');
 
         return new TaskResource($task);
     }

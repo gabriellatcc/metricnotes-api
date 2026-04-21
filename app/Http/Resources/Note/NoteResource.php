@@ -2,7 +2,8 @@
 
 namespace App\Http\Resources\Note;
 
-use App\Http\Resources\NoteType\NoteTypeResource;
+use App\Http\Resources\Tip\TipResource;
+use App\Http\Resources\User\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,8 +17,8 @@ class NoteResource extends JsonResource
             'body' => $this->body,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'user_id' => $this->user_id,
-            'note_types' => NoteTypeResource::collection($this->whenLoaded('noteTypes')),
+            'user' => new UserResource($this->whenLoaded('user')),
+            'tips' => TipResource::collection($this->whenLoaded('tips')),
         ];
     }
 }

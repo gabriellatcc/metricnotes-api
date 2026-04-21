@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Task\AssignTaskTypeRequest;
+use App\Http\Requests\Task\AssignTaskTipRequest;
 use App\Http\Requests\Task\CompleteTaskRequest;
 use App\Http\Requests\Task\DeleteTaskRequest;
 use App\Http\Requests\Task\IndexTaskRequest;
@@ -57,15 +57,15 @@ class TaskController extends Controller
         }
     }
 
-    public function assignType(AssignTaskTypeRequest $request)
+    public function assignType(AssignTaskTipRequest $request)
     {
         try {
             $task = $this->taskService->assignType($request->validated());
-            return $this->respondSuccess($task, 'Tipos de tarefa atribuídos à tarefa com sucesso!');
+            return $this->respondSuccess($task, 'Dicas atribuídas à tarefa com sucesso!');
         } catch (ModelNotFoundException $e) {
             return $this->respondError('Tarefa não encontrada.', null, 404);
         } catch (\Exception $e) {
-            return $this->respondError('Erro ao atribuir tipo de tarefa: ' . $e->getMessage(), null, $e->getCode() ?: 500);
+            return $this->respondError('Erro ao atribuir dicas: ' . $e->getMessage(), null, $e->getCode() ?: 500);
         }
     }
 

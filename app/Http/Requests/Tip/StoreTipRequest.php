@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Requests\NoteType;
+namespace App\Http\Requests\Tip;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreNoteTypeRequest extends FormRequest
+class StoreTipRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -13,7 +12,7 @@ class StoreNoteTypeRequest extends FormRequest
     }
 
     /**
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -23,11 +22,11 @@ class StoreNoteTypeRequest extends FormRequest
         ];
     }
 
-    public function attributes()
+    public function attributes(): array
     {
         return [
-            'name' => 'nome do tipo de nota',
-            'color' => 'cor do tipo de nota',
+            'name' => 'nome da dica',
+            'color' => 'cor da dica',
         ];
     }
 }

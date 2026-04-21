@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Task;
-use App\Models\TaskType;
+use App\Models\Tip;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
@@ -29,7 +29,7 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
             ]);
         }
 
-        $this->ensureTaskTypesForUser($user->id);
+        $this->ensureTipsForUser($user->id);
         $userId = $user->id;
 
         $total = random_int(50, 80);
@@ -113,7 +113,7 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
 
             $task = Task::factory()->create($attrs);
 
-            $this->attachRandomTaskTypes($task, $userId);
+            $this->attachRandomTips($task, $userId);
 
             if (! empty($spec['soft_delete'])) {
                 $task->delete();
@@ -312,9 +312,9 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         return $this->randomCarbonBetween($earliest, $latest);
     }
 
-    private function ensureTaskTypesForUser(string $userId): void
+    private function ensureTipsForUser(string $userId): void
     {
-        if (TaskType::query()->where('user_id', $userId)->exists()) {
+        if (Tip::query()->where('user_id', $userId)->exists()) {
             return;
         }
 
@@ -325,25 +325,25 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         ];
 
         foreach ($defaults as $type) {
-            TaskType::query()->firstOrCreate(
+            Tip::query()->firstOrCreate(
                 ['user_id' => $userId, 'name' => $type['name']],
                 ['color' => $type['color']]
             );
         }
     }
 
-    private function attachRandomTaskTypes(Task $task, string $userId): void
+    private function attachRandomTips(Task $task, string $userId): void
     {
-        $types = TaskType::query()->where('user_id', $userId)->get();
-        if ($types->isEmpty()) {
-            $this->ensureTaskTypesForUser($userId);
-            $types = TaskType::query()->where('user_id', $userId)->get();
+        $tips = Tip::query()->where('user_id', $userId)->get();
+        if ($tips->isEmpty()) {
+            $this->ensureTipsForUser($userId);
+            $tips = Tip::query()->where('user_id', $userId)->get();
         }
 
-        $take = min($types->count(), fake()->numberBetween(1, 3));
-        $ids = $types->shuffle()->take($take)->pluck('id')->all();
+        $take = min($tips->count(), fake()->numberBetween(1, 3));
+        $ids = $tips->shuffle()->take($take)->pluck('id')->all();
         if ($ids !== []) {
-            $task->taskTypes()->attach($ids);
+            $task->tips()->attach($ids);
         }
     }
 }

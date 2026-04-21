@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-class NoteType extends Model
+class Tip extends Model
 {
     use HasUuids;
 
@@ -20,6 +20,11 @@ class NoteType extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function tasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class)->withTimestamps();
     }
 
     public function notes(): BelongsToMany

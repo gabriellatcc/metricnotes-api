@@ -23,8 +23,8 @@ class Note extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function noteTypes(): BelongsToMany
+    public function tips(): BelongsToMany
     {
-        return $this->belongsToMany(NoteType::class)->withTimestamps();
+        return $this->belongsToMany(Tip::class)->withTimestamps();
     }
 }

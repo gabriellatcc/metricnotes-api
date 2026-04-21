@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Task;
 
-use App\Http\Resources\TaskType\TaskTypeResource;
+use App\Http\Resources\Tip\TipResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,7 +33,7 @@ class TaskResource extends JsonResource
             'updated_at' => $this->updated_at,
 
             'user_id' => $this->user_id,
-            'task_types' => TaskTypeResource::collection($this->whenLoaded('taskTypes')),
+            'tips' => TipResource::collection($this->whenLoaded('tips')),
         ];
     }
 }

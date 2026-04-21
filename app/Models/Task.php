@@ -46,8 +46,8 @@ class Task extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function taskTypes(): BelongsToMany
+    public function tips(): BelongsToMany
     {
-        return $this->belongsToMany(TaskType::class)->withTimestamps();
+        return $this->belongsToMany(Tip::class)->withTimestamps();
     }
 }

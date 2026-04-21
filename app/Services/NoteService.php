@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Http\Resources\Note\NoteCollection;
 use App\Http\Resources\Note\NoteResource;
 use App\Models\Note;
-use App\Models\NoteType;
+use App\Models\Tip;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -21,7 +21,7 @@ class NoteService
         }
 
         $notes = Note::query()
-            ->with(['noteTypes'])
+            ->with(['tips', 'user'])
             ->where('user_id', $user->id)
             ->when($data['search'] ?? null, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -29,8 +29,8 @@ class NoteService
                         ->orWhere('body', 'like', "%{$search}%");
                 });
             })
-            ->when($data['note_type_id'] ?? null, function ($query, $typeId) {
-                $query->whereHas('noteTypes', fn ($q) => $q->where('note_types.id', $typeId));
+            ->when($data['tip_id'] ?? null, function ($query, $tipId) {
+                $query->whereHas('tips', fn ($q) => $q->where('tips.id', $tipId));
             })
             ->latest()
             ->paginate($data['per_page'] ?? 15, ['*'], 'page', $data['page'] ?? 1);
@@ -40,7 +40,7 @@ class NoteService
 
     public function show(array $data): NoteResource
     {
-        $note = Note::with(['noteTypes'])->find($data['id']);
+        $note = Note::with(['tips', 'user'])->find($data['id']);
 
         if (! $note) {
             throw new Exception('Nota não encontrada', 404);
@@ -53,17 +53,17 @@ class NoteService
 
     public function store(array $data): NoteResource
     {
-        $noteTypeIds = $data['note_type_ids'] ?? [];
-        unset($data['note_type_ids']);
+        $tipIds = $data['tip_ids'] ?? [];
+        unset($data['tip_ids']);
 
         $data['user_id'] = auth('api')->id();
 
         $note = Note::create($data);
 
-        $syncIds = $this->noteTypeIdsOwnedByNoteUser($note, $noteTypeIds);
-        $note->noteTypes()->sync($syncIds);
+        $syncIds = $this->tipIdsOwnedByNoteUser($note, $tipIds);
+        $note->tips()->sync($syncIds);
 
-        return new NoteResource($note->load('noteTypes'));
+        return new NoteResource($note->load(['tips', 'user']));
     }
 
     public function update(array $data): NoteResource
@@ -81,7 +81,7 @@ class NoteService
             'body' => array_key_exists('body', $data) ? $data['body'] : $note->body,
         ]);
 
-        return new NoteResource($note->load('noteTypes'));
+        return new NoteResource($note->load(['tips', 'user']));
     }
 
     public function assignType(array $data): NoteResource
@@ -90,14 +90,14 @@ class NoteService
 
         Gate::authorize('update', $note);
 
-        $noteTypeIds = $data['note_type_ids'] ?? [];
+        $tipIds = $data['tip_ids'] ?? [];
 
-        DB::transaction(function () use ($note, $noteTypeIds) {
-            $syncIds = $this->noteTypeIdsOwnedByNoteUser($note, $noteTypeIds);
-            $note->noteTypes()->sync($syncIds);
+        DB::transaction(function () use ($note, $tipIds) {
+            $syncIds = $this->tipIdsOwnedByNoteUser($note, $tipIds);
+            $note->tips()->sync($syncIds);
         });
 
-        return new NoteResource($note->fresh()->load('noteTypes'));
+        return new NoteResource($note->fresh()->load(['tips', 'user']));
     }
 
     public function delete(array $data): bool
@@ -117,7 +117,7 @@ class NoteService
      * @param  array<int, string>  $ids
      * @return array<int, string>
      */
-    protected function noteTypeIdsOwnedByNoteUser(Note $note, array $ids): array
+    protected function tipIdsOwnedByNoteUser(Note $note, array $ids): array
     {
         $ids = array_values(array_unique(array_filter($ids)));
 
@@ -125,13 +125,13 @@ class NoteService
             return [];
         }
 
-        $validCount = NoteType::query()
+        $validCount = Tip::query()
             ->whereIn('id', $ids)
             ->where('user_id', $note->user_id)
             ->count();
 
         if ($validCount !== count($ids)) {
-            throw new Exception('Um ou mais tipos de nota são inválidos ou não pertencem ao dono da nota.', 422);
+            throw new Exception('Uma ou mais dicas são inválidas ou não pertencem ao dono da nota.', 422);
         }
 
         return $ids;

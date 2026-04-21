@@ -3,7 +3,7 @@
 namespace App\Observers;
 
 use App\Models\User;
-use App\Models\TaskType;
+use App\Models\Tip;
 
 class UserObserver
 {
@@ -16,7 +16,7 @@ class UserObserver
         ];
 
         foreach ($defaultTypes as $type) {
-            TaskType::create([
+            Tip::create([
                 'user_id' => $user->id,
                 'name' => $type['name'],
                 'color' => $type['color'],

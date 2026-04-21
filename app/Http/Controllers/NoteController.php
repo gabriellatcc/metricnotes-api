@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Note\AssignNoteTypeRequest;
+use App\Http\Requests\Note\AssignNoteTipRequest;
 use App\Http\Requests\Note\DeleteNoteRequest;
 use App\Http\Requests\Note\IndexNoteRequest;
 use App\Http\Requests\Note\ShowNoteRequest;
@@ -59,16 +59,16 @@ class NoteController extends Controller
         }
     }
 
-    public function assignType(AssignNoteTypeRequest $request)
+    public function assignType(AssignNoteTipRequest $request)
     {
         try {
             $note = $this->noteService->assignType($request->validated());
 
-            return $this->respondSuccess($note, 'Tipos de nota atribuídos com sucesso!');
+            return $this->respondSuccess($note, 'Dicas atribuídas com sucesso!');
         } catch (ModelNotFoundException $e) {
             return $this->respondError('Nota não encontrada.', null, 404);
         } catch (\Exception $e) {
-            return $this->respondError('Erro ao atribuir tipos de nota: '.$e->getMessage(), null, $e->getCode() ?: 500);
+            return $this->respondError('Erro ao atribuir dicas: '.$e->getMessage(), null, $e->getCode() ?: 500);
         }
     }
 
