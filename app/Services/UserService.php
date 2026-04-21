@@ -5,10 +5,9 @@ namespace App\Services;
 use App\Http\Resources\User\UserCollection;
 use App\Http\Resources\User\UserResource;
 use App\Models\User;
-use Illuminate\Support\Facades\Hash;
+use Exception;
 use Illuminate\Support\Facades\Gate;
 use Tymon\JWTAuth\Facades\JWTAuth;
-use Exception;
 
 class UserService
 {
@@ -28,7 +27,7 @@ class UserService
         if ($search) {
             $usersQuery->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -59,7 +58,7 @@ class UserService
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => Hash::make($data['password']),
+            'password' => $data['password'],
         ]);
 
         $token = auth('api')->login($user);
@@ -70,7 +69,7 @@ class UserService
                 'access_token' => $token,
                 'token_type' => 'Bearer',
                 'expires_in' => auth('api')->factory()->getTTL() * 60,
-            ]
+            ],
         ];
     }
 
@@ -83,10 +82,6 @@ class UserService
         }
 
         Gate::authorize('update', $user);
-
-        if (isset($data['password'])) {
-            $data['password'] = Hash::make($data['password']);
-        }
 
         $user->update($data);
 
