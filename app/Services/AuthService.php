@@ -12,8 +12,13 @@ class AuthService
 {
     public function login(array $data): array
     {
-        if (!$token = auth('api')->attempt($data)) {
-            throw new Exception('Credenciais inválidas', 401);
+        if (! $token = auth('api')->attempt($data)) {
+            $message = 'Credenciais inválidas';
+            if (config('app.debug')) {
+                $message .= ' (confira e-mail/senha; em banco novo use: php artisan db:seed --class=AdminUserSeeder).';
+            }
+
+            throw new Exception($message, 401);
         }
     
         $user = auth('api')->user();

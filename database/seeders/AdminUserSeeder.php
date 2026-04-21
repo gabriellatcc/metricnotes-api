@@ -17,5 +17,9 @@ class AdminUserSeeder extends Seeder
                 'is_admin' => true,
             ]
         );
+
+        if ($this->command !== null) {
+            $this->command->info('Usuário admin garantido: admin@metricnotes.com (senha: admin123456).');
+        }
     }
 }
