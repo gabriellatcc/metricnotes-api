@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
@@ -48,6 +49,14 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (AuthorizationException $exception) {
+            return response()->json([
+                'success' => false,
+                'data' => null,
+                'message' => 'Forbidden.',
+            ], 403);
+        });
+
+        $exceptions->render(function (AccessDeniedHttpException $exception) {
             return response()->json([
                 'success' => false,
                 'data' => null,

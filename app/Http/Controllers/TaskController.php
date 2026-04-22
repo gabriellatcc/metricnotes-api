@@ -7,10 +7,12 @@ use App\Http\Requests\Task\CompleteTaskRequest;
 use App\Http\Requests\Task\DeleteTaskRequest;
 use App\Http\Requests\Task\IndexTaskRequest;
 use App\Http\Requests\Task\PostponeTaskRequest;
+use App\Http\Requests\Task\RecordTaskViewRequest;
 use App\Http\Requests\Task\ShowTaskRequest;
 use App\Http\Requests\Task\StoreTaskRequest;
 use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Services\TaskService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class TaskController extends Controller
@@ -96,6 +98,18 @@ class TaskController extends Controller
             return $this->respondSuccess($task, 'Tarefa concluída com sucesso!');
         } catch (\Exception $e) {
             return $this->respondError('Erro ao concluir tarefa: ' . $e->getMessage(), null, $e->getCode() ?: 500);
+        }
+    }
+
+    public function recordView(RecordTaskViewRequest $request)
+    {
+        try {
+            $task = $this->taskService->recordView($request->validated());
+            return $this->respondSuccess($task, 'Visualização da tarefa registrada com sucesso!');
+        } catch (AuthorizationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return $this->respondError('Erro ao registrar visualização: ' . $e->getMessage(), null, $e->getCode() ?: 500);
         }
     }
 }

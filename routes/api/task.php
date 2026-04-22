@@ -9,6 +9,7 @@ Route::middleware('jwt')->group(function () {
     Route::patch('/{id}/type', [TaskController::class, 'assignType']);
     Route::patch('/{id}/postpone', [TaskController::class, 'postpone']);
     Route::patch('/{id}/complete', [TaskController::class, 'complete']);
+    Route::post('/{id}/view', [TaskController::class, 'recordView']);
     Route::get('/{id}', [TaskController::class, 'show']);
     Route::put('/{id}', [TaskController::class, 'update']);
     Route::delete('/{id}', [TaskController::class, 'delete']);

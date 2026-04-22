@@ -189,4 +189,23 @@ class TaskService
 
         return new TaskResource($task);
     }
+
+    public function recordView(array $data): TaskResource
+    {
+        $task = Task::find($data['id']);
+
+        if (! $task) {
+            throw new Exception('Tarefa não encontrada', 404);
+        }
+
+        Gate::authorize('update', $task);
+
+        $task->update([
+            'last_viewed_at' => now(),
+        ]);
+
+        $task->load('tips');
+
+        return new TaskResource($task);
+    }
 }
