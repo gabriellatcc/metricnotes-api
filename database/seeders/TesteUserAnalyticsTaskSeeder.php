@@ -13,13 +13,18 @@ use Illuminate\Support\Carbon;
  * (Mon 00:00 – Sun 23:59:59 before this week). All dates are derived from now(), so re-running the
  * seeder keeps data aligned with “last week” instead of drifting to fixed past dates.
  *
- * Creates **6** tasks for the admin user ({@see AdminUserSeeder}).
+ * Creates the tasks listed in {@see self::taskTemplates()} (TCC and household routine)
+ * for the admin user ({@see AdminUserSeeder}).
  */
 class TesteUserAnalyticsTaskSeeder extends Seeder
 {
     private const ADMIN_EMAIL = 'admin@metricnotes.com';
 
-    private const TASK_COUNT = 6;
+    private const TIP_COLORS = [
+        'Trabalho' => '#FF5733',
+        'Estudos' => '#33FF57',
+        'Pessoal' => '#3357FF',
+    ];
 
     public function run(): void
     {
@@ -37,64 +42,16 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         $this->ensureTipsForUser($user->id);
         $userId = $user->id;
 
-        $total = self::TASK_COUNT;
-
-        $nCompleted = (int) floor($total * 0.38);
-        $nPostponedStatus = (int) floor($total * 0.28);
-        $nInProgress = (int) floor($total * 0.14);
-        $nPending = (int) floor($total * 0.10);
-        $nCanceled = (int) floor($total * 0.05);
-        $nSoftDeleted = $total - $nCompleted - $nPostponedStatus - $nInProgress - $nPending - $nCanceled;
-
-        $specs = [];
-        foreach (range(1, $nCompleted) as $_) {
-            $specs[] = [
-                'status' => 'completed',
-                'completed_segment' => fake()->boolean(50) ? 'early' : 'late',
-                'soft_delete' => false,
-            ];
-        }
-        foreach (range(1, $nPostponedStatus) as $_) {
-            $specs[] = ['status' => 'postponed', 'completed_segment' => null, 'soft_delete' => false];
-        }
-        foreach (range(1, $nInProgress) as $_) {
-            $specs[] = ['status' => 'in_progress', 'completed_segment' => null, 'soft_delete' => false];
-        }
-        foreach (range(1, $nPending) as $_) {
-            $specs[] = ['status' => 'pending', 'completed_segment' => null, 'soft_delete' => false];
-        }
-        foreach (range(1, $nCanceled) as $_) {
-            $specs[] = ['status' => 'canceled', 'completed_segment' => null, 'soft_delete' => false];
-        }
-        foreach (range(1, $nSoftDeleted) as $_) {
-            $specs[] = [
-                'status' => fake()->randomElement(['pending', 'in_progress', 'canceled']),
-                'completed_segment' => null,
-                'soft_delete' => true,
-            ];
-        }
-
-        shuffle($specs);
-
-        $postponeFlags = array_merge(
-            array_fill(0, (int) round($total * 0.45), true),
-            array_fill(0, $total - (int) round($total * 0.45), false)
-        );
-        shuffle($postponeFlags);
-
-        foreach ($specs as $index => $spec) {
+        foreach ($this->taskTemplates() as $template) {
             $createdAt = $this->randomCarbonBetween($weekStart, $weekEnd->copy()->subDays(1));
 
-            $usePostponementChain = $postponeFlags[$index] ?? false;
-            if (($spec['status'] ?? '') === 'postponed') {
-                $usePostponementChain = true;
-            }
+            $usePostponementChain = $template['postpone'] || $template['status'] === 'postponed';
 
-            if ($spec['status'] === 'completed' && ($spec['completed_segment'] ?? '') === 'late') {
+            if ($template['status'] === 'completed' && $template['segment'] === 'late') {
                 [$attrs, $createdAt] = $this->buildLateCompletedInWeek($createdAt, $usePostponementChain, $weekStart, $weekEnd);
             } else {
                 $attrs = $this->buildDateAttributesInWeek($createdAt, $usePostponementChain, $weekStart, $weekEnd);
-                if ($spec['status'] === 'completed') {
+                if ($template['status'] === 'completed') {
                     $attrs['completed_at'] = $this->pickCompletedAtInWeek(
                         $createdAt,
                         $attrs['original_due_date'],
@@ -107,10 +64,10 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
             }
 
             $attrs['user_id'] = $userId;
-            $attrs['name'] = fake()->sentence(3);
-            $attrs['description'] = fake()->optional(0.65)->paragraph();
-            $attrs['status'] = $spec['status'];
-            $attrs['priority'] = fake()->numberBetween(1, 5);
+            $attrs['name'] = $template['name'];
+            $attrs['description'] = $template['description'];
+            $attrs['status'] = $template['status'];
+            $attrs['priority'] = $template['priority'];
             $attrs['is_being_viewed'] = false;
             $attrs['last_viewed_at'] = null;
             $attrs['created_at'] = $createdAt;
@@ -118,12 +75,217 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
 
             $task = Task::factory()->create($attrs);
 
-            $this->attachRandomTips($task, $userId);
+            $this->attachTips($task, $userId, $template['tips']);
 
-            if (! empty($spec['soft_delete'])) {
+            if ($template['soft_delete']) {
                 $task->delete();
             }
         }
+    }
+
+    /**
+     * Tarefas fixas e realistas (TCC + rotina doméstica).
+     *
+     * - status: completed | postponed | in_progress | pending | canceled
+     * - segment: 'early' (concluída antes do prazo) ou 'late' (concluída após o prazo); só vale para completed
+     * - postpone: true gera cadeia de adiamentos (1 a 3 datas)
+     * - soft_delete: true exclui a tarefa logo após criar
+     *
+     * @return array<int, array{
+     *     name: string,
+     *     description: string,
+     *     status: string,
+     *     priority: int,
+     *     tips: array<int, string>,
+     *     segment: string|null,
+     *     postpone: bool,
+     *     soft_delete: bool
+     * }>
+     */
+    private function taskTemplates(): array
+    {
+        return [
+            [
+                'name' => 'Revisar o referencial teórico do TCC',
+                'description' => 'Reler os capítulos do livro, conferir as citações e deixar as referências no formato ABNT.',
+                'status' => 'completed',
+                'priority' => 4,
+                'tips' => ['Estudos'],
+                'segment' => 'early',
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Escrever a fundamentação teórica do TCC',
+                'description' => 'Explicar o conceito de Design Thinking com palavras próprias e preparar a ligação com a metodologia.',
+                'status' => 'completed',
+                'priority' => 5,
+                'tips' => ['Estudos'],
+                'segment' => 'late',
+                'postpone' => true,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Preparar os slides da apresentação para a banca',
+                'description' => 'Montar a estrutura da apresentação: problema, objetivos, metodologia, resultados e trabalhos futuros.',
+                'status' => 'postponed',
+                'priority' => 5,
+                'tips' => ['Estudos'],
+                'segment' => null,
+                'postpone' => true,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Revisar ortografia e figuras da documentação',
+                'description' => 'Conferir a numeração das figuras, as legendas e as fontes, e corrigir erros de digitação.',
+                'status' => 'in_progress',
+                'priority' => 3,
+                'tips' => ['Estudos', 'Trabalho'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Lavar e estender a roupa da semana',
+                'description' => 'Separar roupas claras e escuras e deixar tudo pronto para guardar no fim do dia.',
+                'status' => 'completed',
+                'priority' => 2,
+                'tips' => ['Pessoal'],
+                'segment' => 'early',
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Fazer as compras do mês no mercado',
+                'description' => 'Montar a lista de itens de limpeza e alimentos antes de sair, para não esquecer nada.',
+                'status' => 'postponed',
+                'priority' => 3,
+                'tips' => ['Pessoal'],
+                'segment' => null,
+                'postpone' => true,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Limpar o banheiro e passar pano na casa',
+                'description' => 'Faxina semanal: banheiro, cozinha e quartos.',
+                'status' => 'pending',
+                'priority' => 2,
+                'tips' => ['Pessoal'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Organizar a escrivaninha de estudos',
+                'description' => 'Tarefa cancelada e removida: a mesa foi arrumada durante a revisão do TCC.',
+                'status' => 'canceled',
+                'priority' => 1,
+                'tips' => ['Pessoal', 'Estudos'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => true,
+            ],
+                        [
+                'name' => 'Marcar reunião de alinhamento com a orientadora',
+                'description' => 'Combinar data e horário para tirar dúvidas sobre a metodologia e o formato final da documentação.',
+                'status' => 'completed',
+                'priority' => 4,
+                'tips' => ['Estudos'],
+                'segment' => 'early',
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Corrigir as referências que faltam na documentação',
+                'description' => 'Incluir as obras citadas no texto que ainda não aparecem na lista de referências e padronizar tudo em ABNT.',
+                'status' => 'completed',
+                'priority' => 4,
+                'tips' => ['Estudos'],
+                'segment' => 'late',
+                'postpone' => true,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Ensaiar a apresentação do TCC em voz alta',
+                'description' => 'Cronometrar a fala e ajustar os slides que ficarem longos demais.',
+                'status' => 'pending',
+                'priority' => 4,
+                'tips' => ['Estudos'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Testar todas as rotas da API antes da entrega',
+                'description' => 'Rodar os testes de cadastro, login, tarefas, etiquetas e dashboards, registrando o que falhar.',
+                'status' => 'completed',
+                'priority' => 5,
+                'tips' => ['Estudos', 'Trabalho'],
+                'segment' => 'early',
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Gravar o vídeo de demonstração do sistema',
+                'description' => 'Mostrar o fluxo principal: anotar uma ideia, convertê-la em tarefa e acompanhar os gráficos.',
+                'status' => 'postponed',
+                'priority' => 3,
+                'tips' => ['Estudos', 'Trabalho'],
+                'segment' => null,
+                'postpone' => true,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Exportar a documentação final em PDF',
+                'description' => 'Conferir sumário, numeração de páginas, figuras e margens antes de gerar o arquivo definitivo.',
+                'status' => 'in_progress',
+                'priority' => 5,
+                'tips' => ['Estudos'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Passar o aspirador e tirar o pó dos móveis',
+                'description' => 'Aproveitar o fim de semana para limpar a sala e o quarto.',
+                'status' => 'completed',
+                'priority' => 2,
+                'tips' => ['Pessoal'],
+                'segment' => 'late',
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Preparar as marmitas da semana',
+                'description' => 'Cozinhar arroz, feijão e uma proteína, e separar em porções para congelar.',
+                'status' => 'pending',
+                'priority' => 3,
+                'tips' => ['Pessoal'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Pagar a conta de luz',
+                'description' => 'Conferir o valor no aplicativo da distribuidora e programar o pagamento antes do vencimento.',
+                'status' => 'postponed',
+                'priority' => 3,
+                'tips' => ['Pessoal'],
+                'segment' => null,
+                'postpone' => true,
+                'soft_delete' => false,
+            ],
+            [
+                'name' => 'Trocar a lâmpada da sala',
+                'description' => 'Tarefa cancelada e removida: o problema era no soquete e já foi resolvido de outra forma.',
+                'status' => 'canceled',
+                'priority' => 1,
+                'tips' => ['Pessoal'],
+                'segment' => null,
+                'postpone' => false,
+                'soft_delete' => true,
+            ],
+        ];
     }
 
     /**
@@ -323,30 +485,31 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
             return;
         }
 
-        $defaults = [
-            ['name' => 'Trabalho', 'color' => '#FF5733'],
-            ['name' => 'Estudos', 'color' => '#33FF57'],
-            ['name' => 'Pessoal', 'color' => '#3357FF'],
-        ];
-
-        foreach ($defaults as $type) {
+        foreach (self::TIP_COLORS as $name => $color) {
             Tip::query()->firstOrCreate(
-                ['user_id' => $userId, 'name' => $type['name']],
-                ['color' => $type['color']]
+                ['user_id' => $userId, 'name' => $name],
+                ['color' => $color]
             );
         }
     }
 
-    private function attachRandomTips(Task $task, string $userId): void
+    /**
+     * Anexa à tarefa as etiquetas pelo nome, criando as que ainda não existirem para o usuário.
+     *
+     * @param  array<int, string>  $tipNames
+     */
+    private function attachTips(Task $task, string $userId, array $tipNames): void
     {
-        $tips = Tip::query()->where('user_id', $userId)->get();
-        if ($tips->isEmpty()) {
-            $this->ensureTipsForUser($userId);
-            $tips = Tip::query()->where('user_id', $userId)->get();
+        $ids = [];
+
+        foreach ($tipNames as $name) {
+            $tip = Tip::query()->firstOrCreate(
+                ['user_id' => $userId, 'name' => $name],
+                ['color' => self::TIP_COLORS[$name] ?? '#888888']
+            );
+            $ids[] = $tip->id;
         }
 
-        $take = min($tips->count(), fake()->numberBetween(1, 3));
-        $ids = $tips->shuffle()->take($take)->pluck('id')->all();
         if ($ids !== []) {
             $task->tips()->attach($ids);
         }
