@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\PasswordRecoveryOtpMail;
-use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\TesterUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -16,7 +16,7 @@ class PasswordRecoveryTest extends TestCase
     {
         Mail::fake();
 
-        $this->seed(AdminUserSeeder::class);
+        $this->seed(TesterUserSeeder::class);
 
         $response = $this->postJson('/api/auth/forgot-password', [
             'email' => 'admin@metricnotes.com',
@@ -46,7 +46,7 @@ class PasswordRecoveryTest extends TestCase
     {
         Mail::fake();
 
-        $this->seed(AdminUserSeeder::class);
+        $this->seed(TesterUserSeeder::class);
 
         $this->postJson('/api/auth/forgot-password', [
             'email' => 'admin@metricnotes.com',
@@ -103,7 +103,7 @@ class PasswordRecoveryTest extends TestCase
     {
         Mail::fake();
 
-        $this->seed(AdminUserSeeder::class);
+        $this->seed(TesterUserSeeder::class);
 
         $this->postJson('/api/auth/forgot-password', [
             'email' => 'admin@metricnotes.com',
@@ -134,7 +134,7 @@ class PasswordRecoveryTest extends TestCase
     public function test_verify_invalid_code_returns_422(): void
     {
         Mail::fake();
-        $this->seed(AdminUserSeeder::class);
+        $this->seed(TesterUserSeeder::class);
 
         $this->postJson('/api/auth/forgot-password', [
             'email' => 'admin@metricnotes.com',

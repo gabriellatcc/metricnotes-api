@@ -15,7 +15,7 @@ class AuthService
         if (! $token = auth('api')->attempt($data)) {
             $message = 'Credenciais inválidas';
             if (config('app.debug')) {
-                $message .= ' (confira e-mail/senha; em banco novo use: php artisan db:seed --class=AdminUserSeeder).';
+                $message .= ' (confira e-mail/senha; em banco novo use: php artisan db:seed --class=TesterUserSeeder).';
             }
 
             throw new Exception($message, 401);

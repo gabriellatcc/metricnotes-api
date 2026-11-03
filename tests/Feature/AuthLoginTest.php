@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use Database\Seeders\AdminUserSeeder;
+use Database\Seeders\TesterUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,7 +12,7 @@ class AuthLoginTest extends TestCase
 
     public function test_login_succeeds_with_seeded_admin(): void
     {
-        $this->seed(AdminUserSeeder::class);
+        $this->seed(TesterUserSeeder::class);
 
         $response = $this->postJson('/api/auth/login', [
             'email' => 'admin@metricnotes.com',
@@ -31,7 +31,7 @@ class AuthLoginTest extends TestCase
 
     public function test_login_fails_with_wrong_password(): void
     {
-        $this->seed(AdminUserSeeder::class);
+        $this->seed(TesterUserSeeder::class);
 
         $response = $this->postJson('/api/auth/login', [
             'email' => 'admin@metricnotes.com',
