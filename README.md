@@ -1,26 +1,26 @@
 # MetricNotes
 
-> **Gestão Produtiva e Business Intelligence para Autônomos**
+> **Productivity Management and Business Intelligence for remote workers**
 > 
-> *Protótipo de sistema web desenvolvido como Trabalho de Conclusão de Curso (TCC) em Análise e Desenvolvimento de Sistemas.*
+> *Web system prototype developed as a Final Course Project (TCC) in Systems Analysis and Development.*
 
-![Status](https://img.shields.io/badge/Status-Em_Desenvolvimento-yellow)<br>
+![Status](https://img.shields.io/badge/Status-Completed-blue)<br>
 
-### Pré-requisitos
+### Prerequisites
 - PHP (8.3.30)
 - Composer (2.9.5)
-- Node.js ( v24.13.1)
+- Node.js (v24.13.1)
 - NPM (11.8.0)
 
-### Passo a Passo
+### Step by Step
 
 1. Backend:<br>
-   Clone o repositório
+   Clone the repository
    ```bash
    git clone https://github.com/gabriellatcc/metricnotes-api/
    ```
-   Instale as dependências e rode o backend:
-     ```bash
+   Install the dependencies and run the backend:
+   ```bash
    composer install
    cp .env.example .env
    php artisan migrate
@@ -29,14 +29,14 @@
    ```
 
 2. Frontend:<br>
-   Clone o repositório
+   Clone the repository
    ```bash
    git clone https://github.com/gabriellatcc/metricnotes-web/
    ```
-   Instale as dependências e rode o frontend:
+   Install the dependencies and run the frontend:
    ```bash
    npm install
    npm run dev
    ```
 
-3. Acesse: http://localhost:3000
+3. Open: http://localhost:3000

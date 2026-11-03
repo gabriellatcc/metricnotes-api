@@ -8,14 +8,6 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
-/**
- * Seeds tasks for BI-style checks on completion and postponements in the **previous calendar week**
- * (Mon 00:00 – Sun 23:59:59 before this week). All dates are derived from now(), so re-running the
- * seeder keeps data aligned with “last week” instead of drifting to fixed past dates.
- *
- * Creates the tasks listed in {@see self::taskTemplates()} (TCC and household routine)
- * for the admin user ({@see AdminUserSeeder}).
- */
 class TesteUserAnalyticsTaskSeeder extends Seeder
 {
     private const ADMIN_EMAIL = 'admin@metricnotes.com';
@@ -28,8 +20,6 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
 
     public function run(): void
     {
-        [$weekStart, $weekEnd] = $this->previousCalendarWeekBounds();
-
         $user = User::query()->updateOrCreate(
             ['email' => self::ADMIN_EMAIL],
             [
@@ -42,25 +32,32 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         $this->ensureTipsForUser($user->id);
         $userId = $user->id;
 
-        foreach ($this->taskTemplates() as $template) {
-            $createdAt = $this->randomCarbonBetween($weekStart, $weekEnd->copy()->subDays(1));
+        $templates = $this->taskTemplates();
+        $totalTasks = count($templates);
+        $oneThirdCount = (int) round($totalTasks / 3);
 
-            $usePostponementChain = $template['postpone'] || $template['status'] === 'postponed';
-
-            if ($template['status'] === 'completed' && $template['segment'] === 'late') {
-                [$attrs, $createdAt] = $this->buildLateCompletedInWeek($createdAt, $usePostponementChain, $weekStart, $weekEnd);
+        foreach ($templates as $index => $template) {
+            if ($index < $oneThirdCount) {
+                $createdAt = Carbon::now();
+                $due = Carbon::now();
             } else {
-                $attrs = $this->buildDateAttributesInWeek($createdAt, $usePostponementChain, $weekStart, $weekEnd);
-                if ($template['status'] === 'completed') {
-                    $attrs['completed_at'] = $this->pickCompletedAtInWeek(
-                        $createdAt,
-                        $attrs['original_due_date'],
-                        $weekStart,
-                        $weekEnd
-                    );
-                } else {
-                    $attrs['completed_at'] = null;
-                }
+                $createdAt = Carbon::now()->addDays(5);
+                $due = Carbon::now()->addDays(5);
+            }
+
+            $attrs = [
+                'postponed_count' => 0,
+                'postponed_date_1' => null,
+                'postponed_date_2' => null,
+                'postponed_date_3' => null,
+                'original_due_date' => $due,
+                'current_due_date' => $due->copy(),
+            ];
+
+            if ($template['status'] === 'completed') {
+                $attrs['completed_at'] = $due->copy()->addHours(1);
+            } else {
+                $attrs['completed_at'] = null;
             }
 
             $attrs['user_id'] = $userId;
@@ -83,25 +80,6 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         }
     }
 
-    /**
-     * Tarefas fixas e realistas (TCC + rotina doméstica).
-     *
-     * - status: completed | postponed | in_progress | pending | canceled
-     * - segment: 'early' (concluída antes do prazo) ou 'late' (concluída após o prazo); só vale para completed
-     * - postpone: true gera cadeia de adiamentos (1 a 3 datas)
-     * - soft_delete: true exclui a tarefa logo após criar
-     *
-     * @return array<int, array{
-     *     name: string,
-     *     description: string,
-     *     status: string,
-     *     priority: int,
-     *     tips: array<int, string>,
-     *     segment: string|null,
-     *     postpone: bool,
-     *     soft_delete: bool
-     * }>
-     */
     private function taskTemplates(): array
     {
         return [
@@ -185,7 +163,7 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
                 'postpone' => false,
                 'soft_delete' => true,
             ],
-                        [
+            [
                 'name' => 'Marcar reunião de alinhamento com a orientadora',
                 'description' => 'Combinar data e horário para tirar dúvidas sobre a metodologia e o formato final da documentação.',
                 'status' => 'completed',
@@ -288,197 +266,6 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         ];
     }
 
-    /**
-     * @return array{0: Carbon, 1: Carbon}
-     */
-    private function previousCalendarWeekBounds(): array
-    {
-        $thisWeekMonday = Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $lastWeekMonday = $thisWeekMonday->copy()->subWeek();
-        $lastWeekSundayEnd = $thisWeekMonday->copy()->subSecond();
-
-        return [$lastWeekMonday, $lastWeekSundayEnd];
-    }
-
-    private function earliestOf(Carbon $a, Carbon $b): Carbon
-    {
-        return $a->lessThan($b) ? $a : $b;
-    }
-
-    private function latestOf(Carbon $a, Carbon $b): Carbon
-    {
-        return $a->greaterThan($b) ? $a : $b;
-    }
-
-    private function randomCarbonBetween(Carbon $from, Carbon $to): Carbon
-    {
-        if ($from->greaterThan($to)) {
-            [$from, $to] = [$to, $from];
-        }
-
-        return Carbon::createFromTimestamp(
-            fake()->numberBetween($from->getTimestamp(), $to->getTimestamp())
-        );
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function buildDateAttributesInWeek(
-        Carbon $createdAt,
-        bool $usePostponementChain,
-        Carbon $weekStart,
-        Carbon $weekEnd
-    ): array {
-        $attrs = [
-            'postponed_count' => 0,
-            'postponed_date_1' => null,
-            'postponed_date_2' => null,
-            'postponed_date_3' => null,
-        ];
-
-        if (! $usePostponementChain) {
-            $latestOriginal = $weekEnd->copy()->subHours(2);
-            $earliestOriginal = $createdAt->copy()->addHours(2);
-            if ($earliestOriginal->greaterThan($latestOriginal)) {
-                $original = $createdAt->copy()->addDay();
-            } else {
-                $original = $this->randomCarbonBetween($earliestOriginal, $latestOriginal);
-            }
-            $attrs['original_due_date'] = $original;
-            $attrs['current_due_date'] = $original->copy();
-
-            return $attrs;
-        }
-
-        $postponedCount = fake()->numberBetween(1, 3);
-        $attrs['postponed_count'] = $postponedCount;
-
-        $midWeek = $this->randomCarbonBetween(
-            $this->latestOf($createdAt, $weekStart)->copy()->addHours(4),
-            $weekEnd->copy()->subDays(1)
-        );
-
-        $original = $createdAt->copy()->addHours(fake()->numberBetween(6, 48));
-        if ($original->greaterThan($midWeek)) {
-            $original = $this->randomCarbonBetween($createdAt->copy()->addHours(2), $midWeek);
-        }
-
-        $current = $this->randomCarbonBetween(
-            $original->copy()->addHours(2),
-            $this->earliestOf($weekEnd, $original->copy()->addDays(4))
-        );
-        if ($current->lessThanOrEqualTo($original)) {
-            $current = $original->copy()->addHours(4);
-        }
-
-        $attrs['original_due_date'] = $original;
-        $attrs['current_due_date'] = $current;
-
-        $origTs = $original->getTimestamp();
-        $curTs = $current->getTimestamp();
-        $span = max(1, $curTs - $origTs);
-
-        for ($i = 1; $i <= $postponedCount; $i++) {
-            $t = $origTs + (int) ($span * $i / ($postponedCount + 1));
-            $attrs['postponed_date_'.$i] = Carbon::createFromTimestamp($t);
-        }
-
-        return $attrs;
-    }
-
-    /**
-     * @return array{0: array<string, mixed>, 1: Carbon}
-     */
-    private function buildLateCompletedInWeek(
-        Carbon $createdAt,
-        bool $usePostponementChain,
-        Carbon $weekStart,
-        Carbon $weekEnd
-    ): array {
-        $attrs = [
-            'postponed_count' => 0,
-            'postponed_date_1' => null,
-            'postponed_date_2' => null,
-            'postponed_date_3' => null,
-        ];
-
-        $completedAtMoment = $this->randomCarbonBetween(
-            $weekStart->copy()->addDays(2),
-            $weekEnd->copy()->subHours(2)
-        );
-
-        $currentDue = $completedAtMoment->copy()
-            ->subDays(fake()->numberBetween(1, 3))
-            ->subHours(fake()->numberBetween(1, 8));
-
-        if ($currentDue->lessThanOrEqualTo($createdAt)) {
-            $currentDue = $createdAt->copy()->addHours(12);
-        }
-        if ($currentDue->greaterThanOrEqualTo($completedAtMoment)) {
-            $currentDue = $completedAtMoment->copy()->subHours(3);
-        }
-
-        if (! $usePostponementChain) {
-            $attrs['original_due_date'] = $currentDue->copy();
-            $attrs['current_due_date'] = $currentDue->copy();
-        } else {
-            $postponedCount = fake()->numberBetween(1, 2);
-            $attrs['postponed_count'] = $postponedCount;
-
-            $originalDue = $currentDue->copy()->subDays(fake()->numberBetween(1, 3));
-            if ($originalDue->lessThanOrEqualTo($createdAt)) {
-                $originalDue = $createdAt->copy()->addHours(4);
-            }
-
-            $attrs['original_due_date'] = $originalDue;
-            $attrs['current_due_date'] = $currentDue;
-
-            $origTs = $originalDue->getTimestamp();
-            $curTs = $currentDue->getTimestamp();
-            $span = max(1, $curTs - $origTs);
-
-            for ($i = 1; $i <= $postponedCount; $i++) {
-                $t = $origTs + (int) ($span * $i / ($postponedCount + 1));
-                $attrs['postponed_date_'.$i] = Carbon::createFromTimestamp($t);
-            }
-        }
-
-        if ($createdAt->greaterThanOrEqualTo($attrs['original_due_date'])) {
-            $createdAt = $attrs['original_due_date']->copy()->subHours(6);
-            if ($createdAt->lessThan($weekStart)) {
-                $createdAt = $weekStart->copy()->addHours(2);
-            }
-        }
-
-        $attrs['completed_at'] = $completedAtMoment;
-
-        return [$attrs, $createdAt];
-    }
-
-    private function pickCompletedAtInWeek(
-        Carbon $createdAt,
-        Carbon $originalDue,
-        Carbon $weekStart,
-        Carbon $weekEnd
-    ): Carbon {
-        if ($originalDue->lessThanOrEqualTo($createdAt)) {
-            $originalDue = $this->randomCarbonBetween(
-                $createdAt->copy()->addHours(4),
-                $weekEnd->copy()->subHours(4)
-            );
-        }
-
-        $latest = $this->earliestOf($originalDue->copy()->subHour(), $weekEnd->copy()->subHour());
-        $earliest = $this->latestOf($createdAt->copy()->addHour(), $weekStart->copy()->addHour());
-
-        if ($latest->lessThanOrEqualTo($earliest)) {
-            return $earliest;
-        }
-
-        return $this->randomCarbonBetween($earliest, $latest);
-    }
-
     private function ensureTipsForUser(string $userId): void
     {
         if (Tip::query()->where('user_id', $userId)->exists()) {
@@ -493,11 +280,6 @@ class TesteUserAnalyticsTaskSeeder extends Seeder
         }
     }
 
-    /**
-     * Anexa à tarefa as etiquetas pelo nome, criando as que ainda não existirem para o usuário.
-     *
-     * @param  array<int, string>  $tipNames
-     */
     private function attachTips(Task $task, string $userId, array $tipNames): void
     {
         $ids = [];
